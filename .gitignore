@@ -1,0 +1,16 @@
+### python ###
+__pycache__/
+*.pyc
+
+### env ###
+v32/
+
+### test_file ###
+__temp__*
+
+### data ###
+_media/
+_db/
+
+### ui ###
+*.ui
