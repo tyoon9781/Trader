@@ -1,14 +1,17 @@
-from pykiwoom.kiwoom import *
+from pykiwoom.kiwoom import Kiwoom
 import pandas as pd
 import time
 from datetime import datetime
 
+from multiprocessing import Queue
 
 class MyBot:
+    TEST_SCREEN = "0970"
+    TEST_SCREEN2 = "0971"
+    주식체결="주식체결"
     def __init__(self):
         kiwoom = Kiwoom()
         kiwoom.CommConnect(block=True)
-        
         self.kw = kiwoom
         self.account_count = self.kw.GetLoginInfo("ACCOUNT_CNT")
         self.account_list = self.kw.GetLoginInfo("ACCNO")
@@ -22,27 +25,80 @@ class MyBot:
         self.init()
 
     def init(self):
-        print("전체 계좌수 :", self.kw.GetLoginInfo("ACCOUNT_CNT"))
-        print("전체 계좌번호 리스트 :", self.kw.GetLoginInfo("ACCNO"))
-        print("사용자 ID :", self.kw.GetLoginInfo("USER_ID"))
-        print("사용자명 :", self.kw.GetLoginInfo("USER_NAME"))
-        print("키보드 보안 처리 :", bool(self.kw.GetLoginInfo("KEY_BSECGB")))
-        print("방화벽 설정 여부 :", bool(self.kw.GetLoginInfo("FIREW_SECGB")))
-        print("연결 여부 :", bool(self.kw.GetConnectState()))
+        print("My bot start")
+        ## call back connect
+        self.kw.ocx.OnReceiveRealData.connect(self.test_get_real_time_data)
 
     def get_conditions(self):
         self.kw.GetConditionLoad()
         return pd.DataFrame(self.kw.GetConditionNameList(), columns=["index", "name"])
 
-    def get_history_day_info_once(self, code) -> pd.DataFrame:
-        return self.kw.block_request("opt10081", 종목코드=code, 기준일자=datetime.now().strftime("%Y%m%d"), 수정주가구분=1, output="주식일봉차트조회", next=0)
-    
-    def get_history_minute_info_once(self, code) -> pd.DataFrame:
-        return self.kw.block_request("opt10080", 종목코드=code, 기준일자=datetime.now().strftime("%Y%m%d"), 수정주가구분=1, output="주식분봉차트조회", next=0)
-    
-    def get_history_tick_info_once(self, code) -> pd.DataFrame:
-        return self.kw.block_request("opt10079", 종목코드=code, 기준일자=datetime.now().strftime("%Y%m%d"), 수정주가구분=1, output="주식틱봉차트조회", next=0)
-    
+    ## call
+    def test_real_time_info_connect(self):
+        self.kw.SetRealReg(self.TEST_SCREEN, "048530;005930;000020", "10:20", 0)
+        # self.kw.SetRealReg(self.TEST_SCREEN2, "000020", "10", 0)
+        print("Connect test")
+    ## disconnect
+    def test_real_time_info_disconnect(self):
+        self.kw.DisconnectRealData(self.TEST_SCREEN)
+        # self.kw.DisconnectRealData(self.TEST_SCREEN2)
+        print("Disconnect test")
+
+    ## back
+    def test_get_real_time_data(self, code, real_type, data):
+        print("real_type:", real_type, "code:", code, "data:", data)
+        ## 주식시세
+        print("====주식시세====")
+        print(f"현재가 {code} Data :", self.kw.GetCommRealData(code, "10"))
+        print(f"전일대비 {code} Data :", self.kw.GetCommRealData(code, "11"))
+        print(f"등락율 {code} Data :", self.kw.GetCommRealData(code, "12"))
+        print(f"최우선매도호가 {code} Data :", self.kw.GetCommRealData(code, "27"))
+        print(f"최우선매수호가 {code} Data :", self.kw.GetCommRealData(code, "28"))
+        print(f"누적거래량 {code} Data :", self.kw.GetCommRealData(code, "13"))
+        print(f"누적거래대금 {code} Data :", self.kw.GetCommRealData(code, "14"))
+        print(f"시가 {code} Data :", self.kw.GetCommRealData(code, "16"))
+        print(f"고가 {code} Data :", self.kw.GetCommRealData(code, "17"))
+        print(f"저가 {code} Data :", self.kw.GetCommRealData(code, "18"))
+        print(f"전일대비기호 {code} Data :", self.kw.GetCommRealData(code, "25"))
+        print(f"전일거래량대비(계약, 주) {code} Data :", self.kw.GetCommRealData(code, "26"))
+        print(f"거래대금증감 {code} Data :", self.kw.GetCommRealData(code, "29"))
+        print(f"전일거래량대비(비율) {code} Data :", self.kw.GetCommRealData(code, "30"))
+        print(f"거래회전율 {code} Data :", self.kw.GetCommRealData(code, "31"))
+        print(f"거래비용 {code} Data :", self.kw.GetCommRealData(code, "32"))
+        print(f"시가총액(억) {code} Data :", self.kw.GetCommRealData(code, "311"))
+        print(f"상한가발생시간 {code} Data :", self.kw.GetCommRealData(code, "567"))
+        print(f"하한가발생시간 {code} Data :", self.kw.GetCommRealData(code, "568"))
+        print()
+
+        ## 주식체결
+        print("====주식체결====")
+        print(f"체결시간 {code} Data :", self.kw.GetCommRealData(code, "20"))
+        print(f"현재가 {code} Data :", self.kw.GetCommRealData(code, "10"))
+        print(f"전일대비 {code} Data :", self.kw.GetCommRealData(code, "11"))
+        print(f"등락율 {code} Data :", self.kw.GetCommRealData(code, "12"))
+        print(f"최우선매도호가 {code} Data :", self.kw.GetCommRealData(code, "27"))
+        print(f"최우선매수호가 {code} Data :", self.kw.GetCommRealData(code, "28"))
+        print(f"거래량(+매수, -매도) {code} Data :", self.kw.GetCommRealData(code, "15"))
+        print(f"누적거래량 {code} Data :", self.kw.GetCommRealData(code, "13"))
+        print(f"누적거래대금 {code} Data :", self.kw.GetCommRealData(code, "14"))
+        print(f"시가 {code} Data :", self.kw.GetCommRealData(code, "16"))
+        print(f"고가 {code} Data :", self.kw.GetCommRealData(code, "17"))
+        print(f"저가 {code} Data :", self.kw.GetCommRealData(code, "18"))
+        print(f"전일대비기호 {code} Data :", self.kw.GetCommRealData(code, "25"))
+        print(f"전일거래량대비(계약, 주) {code} Data :", self.kw.GetCommRealData(code, "26"))
+        print(f"거래대금증감 {code} Data :", self.kw.GetCommRealData(code, "29"))
+        print(f"전일거래량대비(비율) {code} Data :", self.kw.GetCommRealData(code, "30"))
+        print(f"거래회전율 {code} Data :", self.kw.GetCommRealData(code, "31"))
+        print(f"거래비용 {code} Data :", self.kw.GetCommRealData(code, "32"))
+        print(f"시가총액(억) {code} Data :", self.kw.GetCommRealData(code, "311"))
+        print(f"장구분 {code} Data :", self.kw.GetCommRealData(code, "290"))
+        print(f"KO접근도 {code} Data :", self.kw.GetCommRealData(code, "691"))
+        print(f"상한가발생시간 {code} Data :", self.kw.GetCommRealData(code, "567"))
+        print(f"하한가발생시간 {code} Data :", self.kw.GetCommRealData(code, "568"))
+        print(f"전일 동시간 거래량 비율 {code} Data :", self.kw.GetCommRealData(code, "851"))
+        print()
+
+
     def request_day_history_info(self, code, date, count=5):
         """
         code = string
@@ -105,6 +161,15 @@ class MyBot:
     ######################################
     # well-made methods
     ######################################
+    def get_history_day_info_once(self, code) -> pd.DataFrame:
+        return self.kw.block_request("opt10081", 종목코드=code, 기준일자=datetime.now().strftime("%Y%m%d"), 수정주가구분=1, output="주식일봉차트조회", next=0)
+    
+    def get_history_minute_info_once(self, code) -> pd.DataFrame:
+        return self.kw.block_request("opt10080", 종목코드=code, 기준일자=datetime.now().strftime("%Y%m%d"), 수정주가구분=1, output="주식분봉차트조회", next=0)
+    
+    def get_history_tick_info_once(self, code) -> pd.DataFrame:
+        return self.kw.block_request("opt10079", 종목코드=code, 기준일자=datetime.now().strftime("%Y%m%d"), 수정주가구분=1, output="주식틱봉차트조회", next=0)
+
     def get_basic_info_themes(self, format: str="gc"):
         if format == "gc":
             print(self.kw.GetThemeGroupList(1))  ## {그룹명 : 코드}

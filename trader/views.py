@@ -11,7 +11,7 @@ class Trader(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.my_bot = MyBot()
+        self.bot = MyBot()
 
         self.market_price_flag = False
         self.current_buy_volume = 0
@@ -24,7 +24,7 @@ class Trader(QtWidgets.QMainWindow):
         self.current_total_sell_adv_ratio = float(self.ui.lineEdit_total_sell_adv_ratio.text())
         self.current_total_sell_dis_ratio = float(self.ui.lineEdit_total_sell_dis_ratio.text())
         self.current_total_sell_time = self.ui.dateTimeEdit_total_sell_time.dateTime().time()
-        self.market_info = self.my_bot.get_market_info_kosdac_n_kospi()
+        self.market_info = self.bot.get_market_info_kosdac_n_kospi()
         self.current_company_code = "000000"
         self.condition_table_column_checkbox = QtWidgets.QCheckBox()
         self.condition_table_checkbox_list = []
@@ -34,10 +34,17 @@ class Trader(QtWidgets.QMainWindow):
         self.init()
     
     def init(self):
+        ##########################
+        ## 자동 거래 tab
+        ##########################
+
         ## connect auto page
         self.ui.pushButton_auto_trading_start.clicked.connect(self.click_pushButton_auto_trading_start)
         self.ui.pushButton_auto_trading_end.clicked.connect(self.click_pushButton_auto_trading_end)
         self.ui.pushButton_select_conditional.clicked.connect(self.click_pushButton_select_conditional)
+        self.ui.pushButton_test_connect.clicked.connect(self.click_pushButton_test_connect)
+        self.ui.pushButton_test_disconnect.clicked.connect(self.click_pushButton_test_disconnect)
+        self.ui.pushButton_test_function.clicked.connect(self.click_pushButton_test_function)
         ## get basic info
         self._update_label_buy_volume()
         self._update_label_sell_volume()
@@ -48,7 +55,7 @@ class Trader(QtWidgets.QMainWindow):
         self.ui.tableWidget_contitional_search.horizontalHeader().sectionClicked.connect(self.click_tableWidget_contitional_search)
 
         ##########################
-        ## connect manual page
+        ## 수동 거래 tab
         ##########################
         self.ui.pushButton_buy_order.clicked.connect(self.click_pushButton_buy_order)
         self.ui.pushButton_sell_order.clicked.connect(self.click_pushButton_sell_order)
@@ -59,15 +66,25 @@ class Trader(QtWidgets.QMainWindow):
 
         ## get basic info
         self._update_label_company_code()
-        self.ui.label_user_id.setText(f"아이디 : {self.my_bot.user_id}")
-        self.ui.label_user_name.setText(f"이름 : {self.my_bot.user_name}")
-        self.ui.label_account_count.setText(f"계좌수 : {self.my_bot.account_count}")
+        self.ui.label_user_id.setText(f"아이디 : {self.bot.user_id}")
+        self.ui.label_user_name.setText(f"이름 : {self.bot.user_name}")
+        self.ui.label_account_count.setText(f"계좌수 : {self.bot.account_count}")
+
         ## TODO : 복수 계좌
-        self.ui.label_account.setText(f"선택계좌 : {self.my_bot.account}")   
-        self.ui.label_keyboard_secure_exception.setText(f"키보드 보안 처리 : {self.my_bot.keyboard_secure_exception}")
-        self.ui.label_waterwall_setup.setText(f"방화벽 설정 : {self.my_bot.waterwall_setup}")
-        self.ui.label_connection.setText(f"연결 : {self.my_bot.connection}")
+        self.ui.label_account.setText(f"선택계좌 : {self.bot.account}")   
+        self.ui.label_keyboard_secure_exception.setText(f"키보드 보안 처리 : {self.bot.keyboard_secure_exception}")
+        self.ui.label_waterwall_setup.setText(f"방화벽 설정 : {self.bot.waterwall_setup}")
+        self.ui.label_connection.setText(f"연결 : {self.bot.connection}")
         self.ui.lineEdit_company_name.setPlaceholderText("종목명")
+
+    def click_pushButton_test_connect(self):
+        self.bot.test_real_time_info_connect()
+
+    def click_pushButton_test_disconnect(self):
+        self.bot.test_real_time_info_disconnect()
+
+    def click_pushButton_test_function(self):
+        self.ui.plainTextEdit_test_area.appendPlainText(str("test"))
 
     def click_tableWidget_contitional_search(self, column):
         if column == 0:
@@ -84,7 +101,7 @@ class Trader(QtWidgets.QMainWindow):
 
     def click_pushButton_select_conditional(self):
         current_conditional_text = self.ui.comboBox_conditional.currentText()
-        code_list = self.my_bot.get_account_info_conditional_expression(current_conditional_text)
+        code_list = self.bot.get_account_info_conditional_expression(current_conditional_text)
         self.ui.tableWidget_contitional_search.setRowCount(len(code_list))
         self.condition_table_checkbox_list = []
         for i in range(len(code_list)):
@@ -94,12 +111,12 @@ class Trader(QtWidgets.QMainWindow):
                 "checkbox",
                 "상태",
                 code,
-                self.my_bot.kw.GetMasterCodeName(code),     ## 종목 명
+                self.bot.kw.GetMasterCodeName(code),     ## 종목 명
                 "구문",
-                self.my_bot.kw.GetCommRealData(code, 11),   ## 전일 대비
-                self.my_bot.kw.GetCommRealData(code, 10),   ## 현재가
-                self.my_bot.kw.GetCommRealData(code, 12),   ## 등락율
-                self.my_bot.kw.GetCommRealData(code, 13),   ## 누적거래량
+                self.bot.kw.GetCommRealData(code, 11),   ## 전일 대비
+                self.bot.kw.GetCommRealData(code, 10),   ## 현재가
+                self.bot.kw.GetCommRealData(code, 12),   ## 등락율
+                self.bot.kw.GetCommRealData(code, 13),   ## 누적거래량
                 "편입가",
                 "편입대비",
                 "수익률"
@@ -119,7 +136,7 @@ class Trader(QtWidgets.QMainWindow):
         print("click_pushButton_auto_trading_start")
 
     def _update_comboBox_conditional(self):
-        self.ui.comboBox_conditional.addItems(self.my_bot.conditions["name"])
+        self.ui.comboBox_conditional.addItems(self.bot.conditions["name"])
 
     def _update_label_buy_volume(self):
         self.ui.label_buy_volume.setText(str(self.current_buy_volume))
@@ -178,12 +195,12 @@ class Trader(QtWidgets.QMainWindow):
         if not quantity_flag:
             return False
         if self.market_price_flag:
-            self.my_bot.order_buy_market_price(code, quantity)
+            self.bot.order_buy_market_price(code, quantity)
         else:
             custom_price, custom_price_flag = self._get_custom_price()
             if not custom_price_flag:
                 return False
-            self.my_bot.order_buy_custom_price(code, quantity, custom_price)
+            self.bot.order_buy_custom_price(code, quantity, custom_price)
 
     def click_pushButton_sell_order(self):
         code = self.current_company_code
@@ -191,12 +208,12 @@ class Trader(QtWidgets.QMainWindow):
         if not quantity_flag:
             return False
         if self.market_price_flag:
-            self.my_bot.order_sell_market_price(code, quantity)
+            self.bot.order_sell_market_price(code, quantity)
         else:
             custom_price, custom_price_flag = self._get_custom_price()
             if not custom_price_flag:
                 return False
-            self.my_bot.order_sell_custom_price(code, quantity, custom_price)
+            self.bot.order_sell_custom_price(code, quantity, custom_price)
 
     def click_pushButton_fix_order(self):
         pass
